@@ -1,9 +1,12 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using NETCore.MailKit.Core;
 using PointOfSaleMVC.Data;
+using PointOfSaleMVC.EmailModel;
+using PointOfSaleMVC.EmailService;
 using PointOfSaleMVC.Models;
-using PointOfSaleMVC.Service;
 
 namespace PointOfSaleMVC
 {
@@ -24,11 +27,32 @@ namespace PointOfSaleMVC
 
             builder.Services.AddAuthentication().AddFacebook(options =>
             {
-                options.AppId = "";
-                options.AppSecret = "";
+                options.AppId = "453";
+                options.AppSecret = "hfgd";
             });
 
-            builder.Services.AddTransient<IEmailSender, MailJetEmailSender>();
+            // forgot password token lifetime
+            builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
+                    opt.TokenLifespan = TimeSpan.FromHours(2));
+
+            var emailConfig = builder.Configuration
+                .GetSection("EmailConfiguration")
+                .Get<EmailConfiguration>();
+            builder.Services.AddSingleton(emailConfig);
+
+           // builder.Services.AddScoped<IEmailService,EmailSender>();
+
+            //builder.Services.AddScoped<IEmailSender, EmailSender>();
+
+            //var emailConfig = builder.Configuration.GetSection("EmailConfiguration")
+            //        .Get<MailJetEmailSender>();
+
+            //builder.Services.AddSingleton(emailConfig);
+
+
+            builder.Services.AddTransient<IEmailSender, EmailSender>();
+
+
 
             builder.Services.Configure<IdentityOptions>(opt =>
             {
@@ -37,6 +61,13 @@ namespace PointOfSaleMVC
                 opt.Password.RequireUppercase = true;
                 opt.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(1);
                 opt.Lockout.MaxFailedAccessAttempts = 3;
+            });
+
+            // show access denied to unathorized roles
+
+            builder.Services.ConfigureApplicationCookie(options =>
+            {
+                options.AccessDeniedPath = new Microsoft.AspNetCore.Http.PathString("/Home/AccessDenied");
             });
 
             var app = builder.Build();

@@ -13,12 +13,15 @@ namespace PointOfSaleMVC.Controllers
     public class AccountController : Controller
     {
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly RoleManager<IdentityRole> _roleManager;
+
         private readonly SignInManager<ApplicationUser> _signInManager;
         private readonly IEmailSender _emailSender;
         private readonly UrlEncoder _urlEncoder;
-        public AccountController(UserManager<ApplicationUser> userManager,SignInManager<ApplicationUser> signInManager, IEmailSender emailSender, UrlEncoder urlEncoder)
+        public AccountController(UserManager<ApplicationUser> userManager,RoleManager<IdentityRole> roleManager,SignInManager<ApplicationUser> signInManager, IEmailSender emailSender, UrlEncoder urlEncoder)
         {
             _userManager = userManager;
+            _roleManager = roleManager;
             _signInManager = signInManager;
             _emailSender = emailSender;
             _urlEncoder = urlEncoder;
@@ -30,125 +33,85 @@ namespace PointOfSaleMVC.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> Register()
+        [AllowAnonymous]
+        public async Task<IActionResult> Register(string returnurl = null)
         {
-            RegisterViewModel registerViewModel = new RegisterViewModel();
+            if (!await _roleManager.RoleExistsAsync("Admin"))
+            {
+                //create roles
+                await _roleManager.CreateAsync(new IdentityRole("Admin"));
+                await _roleManager.CreateAsync(new IdentityRole("User"));
+            }
+
+            List<SelectListItem> listItems = new List<SelectListItem>();
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Admin",
+                Text = "Admin"
+            });
+            listItems.Add(new SelectListItem()
+            {
+                Value = "User",
+                Text = "User"
+            });
+
+
+
+            ViewData["ReturnUrl"] = returnurl;
+            RegisterViewModel registerViewModel = new RegisterViewModel()
+            {
+                RoleList = listItems
+            };
             return View(registerViewModel);
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Register(RegisterViewModel model)
+        public async Task<IActionResult> Register(RegisterViewModel model, string returnurl = null)
         {
+            ViewData["ReturnUrl"] = returnurl;
+            returnurl = returnurl ?? Url.Content("~/");
             if (ModelState.IsValid)
             {
-                var user = new ApplicationUser
-                {
-                    UserName = model.Email,
-                    Email = model.Email,
-                    Name = model.Name,
-                };
-
+                var user = new ApplicationUser { UserName = model.Email, Email = model.Email, Name = model.Name };
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
+                    if (model.RoleSelected != null && model.RoleSelected.Length > 0 && model.RoleSelected == "Admin")
+                    {
+                        await _userManager.AddToRoleAsync(user, "Admin");
+                    }
+                    else
+                    {
+                        await _userManager.AddToRoleAsync(user, "User");
+                    }
 
-                    //to confirm register by email
-                    var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    var callbackurl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: HttpContext.Request.Scheme);
+                    //var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                    //var callbackurl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: HttpContext.Request.Scheme);
 
-                    await _emailSender.SendEmailAsync(model.Email, "Confirm your account - Identity Manager",
-                        "Please confirm your account by clicking here: <a href=\"" + callbackurl + "\">link</a>");
-
+                    //await _emailSender.SendEmailAsync(model.Email, "Confirm your account - Identity Manager",
+                    //    "Please confirm your account by clicking here: <a href=\"" + callbackurl + "\">link</a>");
                     await _signInManager.SignInAsync(user, isPersistent: false);
+                    return LocalRedirect(returnurl);
                 }
-
                 AddErrors(result);
             }
+
+            List<SelectListItem> listItems = new List<SelectListItem>();
+            listItems.Add(new SelectListItem()
+            {
+                Value = "Admin",
+                Text = "Admin"
+            });
+            listItems.Add(new SelectListItem()
+            {
+                Value = "User",
+                Text = "User"
+            });
+            model.RoleList = listItems;
             return View(model);
         }
-
-
-        //[HttpGet]
-        //[AllowAnonymous]
-        //public async Task<IActionResult> Register(string returnurl = null)
-        //{
-        //    if (!await _roleManager.RoleExistsAsync("Admin"))
-        //    {
-        //        //create roles
-        //        await _roleManager.CreateAsync(new IdentityRole("Admin"));
-        //        await _roleManager.CreateAsync(new IdentityRole("User"));
-        //    }
-
-        //    List<SelectListItem> listItems = new List<SelectListItem>();
-        //    listItems.Add(new SelectListItem()
-        //    {
-        //        Value = "Admin",
-        //        Text = "Admin"
-        //    });
-        //    listItems.Add(new SelectListItem()
-        //    {
-        //        Value = "User",
-        //        Text = "User"
-        //    });
-
-
-
-        //    ViewData["ReturnUrl"] = returnurl;
-        //    RegisterViewModel registerViewModel = new RegisterViewModel()
-        //    {
-        //        RoleList = listItems
-        //    };
-        //    return View(registerViewModel);
-        //}
-
-        //[HttpPost]
-        //[AllowAnonymous]
-        //[ValidateAntiForgeryToken]
-        //public async Task<IActionResult> Register(RegisterViewModel model, string returnurl = null)
-        //{
-        //    ViewData["ReturnUrl"] = returnurl;
-        //    returnurl = returnurl ?? Url.Content("~/");
-        //    if (ModelState.IsValid)
-        //    {
-        //        var user = new ApplicationUser { UserName = model.Email, Email = model.Email, Name = model.Name };
-        //        var result = await _userManager.CreateAsync(user, model.Password);
-        //        if (result.Succeeded)
-        //        {
-        //            if (model.RoleSelected != null && model.RoleSelected.Length > 0 && model.RoleSelected == "Admin")
-        //            {
-        //                await _userManager.AddToRoleAsync(user, "Admin");
-        //            }
-        //            else
-        //            {
-        //                await _userManager.AddToRoleAsync(user, "User");
-        //            }
-
-        //            var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-        //            var callbackurl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: HttpContext.Request.Scheme);
-
-        //            await _emailSender.SendEmailAsync(model.Email, "Confirm your account - Identity Manager",
-        //                "Please confirm your account by clicking here: <a href=\"" + callbackurl + "\">link</a>");
-        //            await _signInManager.SignInAsync(user, isPersistent: false);
-        //            return LocalRedirect(returnurl);
-        //        }
-        //        AddErrors(result);
-        //    }
-
-        //    List<SelectListItem> listItems = new List<SelectListItem>();
-        //    listItems.Add(new SelectListItem()
-        //    {
-        //        Value = "Admin",
-        //        Text = "Admin"
-        //    });
-        //    listItems.Add(new SelectListItem()
-        //    {
-        //        Value = "User",
-        //        Text = "User"
-        //    });
-        //    model.RoleList = listItems;
-        //    return View(model);
-        //}
 
         [HttpGet]
         [AllowAnonymous]
@@ -244,7 +207,7 @@ namespace PointOfSaleMVC.Controllers
                 var code = await _userManager.GeneratePasswordResetTokenAsync(user);
                 var callbackurl = Url.Action("ResetPassword", "Account", new { userId = user.Id, code = code }, protocol: HttpContext.Request.Scheme);
 
-                await _emailSender.SendEmailAsync(model.Email, "Reset Password - Identity Manager",
+                await _emailSender.SendEmailAsync(model.Email, "Reset Password - PointOfSaleMVC Manager",
                     "Please reset your password by clicking here: <a href=\"" + callbackurl + "\">link</a>");
 
                 return RedirectToAction("ForgotPasswordConfirmation");
@@ -372,14 +335,14 @@ namespace PointOfSaleMVC.Controllers
                 var result = await _userManager.CreateAsync(user);
                 if (result.Succeeded)
                 {
-                    //await _userManager.AddToRoleAsync(user, "User");
-                    //result = await _userManager.AddLoginAsync(user, info);
-                    //if (result.Succeeded)
-                    //{
+                    await _userManager.AddToRoleAsync(user, "User");
+                    result = await _userManager.AddLoginAsync(user, info);
+                    if (result.Succeeded)
+                    {
                         await _signInManager.SignInAsync(user, isPersistent: false);
                         await _signInManager.UpdateExternalAuthenticationTokensAsync(info);
                         return LocalRedirect(returnurl);
-                    //}
+                    }
                 }
                 AddErrors(result);
             }
