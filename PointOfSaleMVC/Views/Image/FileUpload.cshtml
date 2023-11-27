@@ -1,0 +1,31 @@
+﻿@model PointOfSaleMVC.ImageModels.FileUpload
+
+<form asp-action="FileUpload" method="post" enctype="multipart/form-data">
+    <div>
+        <label for="Files">Select Files:</label>
+        <input type="file" name="Files" id="Files" multiple />
+    </div>
+
+    <div>
+        <button type="submit">Upload</button>
+    </div>
+</form>
+
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="validation-summary-errors">
+        <h4>Validation Errors:</h4>
+        <ul>
+            @foreach (var key in ViewData.ModelState.Keys)
+            {
+                if (ViewData.ModelState[key].ValidationState == Microsoft.AspNetCore.Mvc.ModelBinding.ModelValidationState.Invalid)
+                {
+                    foreach (var error in ViewData.ModelState[key].Errors)
+                    {
+                        <li>@error.ErrorMessage</li>
+                    }
+                }
+            }
+        </ul>
+    </div>
+}
