@@ -1,11 +1,7 @@
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using NETCore.MailKit.Core;
 using PointOfSaleMVC.Data;
-using PointOfSaleMVC.EmailModel;
-using PointOfSaleMVC.EmailService;
+using PointOfSaleMVC.EmailSer;
 using PointOfSaleMVC.Models;
 
 namespace PointOfSaleMVC
@@ -27,30 +23,20 @@ namespace PointOfSaleMVC
 
             builder.Services.AddAuthentication().AddFacebook(options =>
             {
-                options.AppId = "453";
-                options.AppSecret = "hfgd";
+                options.AppId = "254976567565973";
+                options.AppSecret = "57e1db211adc1e9b24042800b71b1071";
             });
 
             // forgot password token lifetime
             builder.Services.Configure<DataProtectionTokenProviderOptions>(opt =>
                     opt.TokenLifespan = TimeSpan.FromHours(2));
 
-            var emailConfig = builder.Configuration
-                .GetSection("EmailConfiguration")
-                .Get<EmailConfiguration>();
-            builder.Services.AddSingleton(emailConfig);
+            // register option pattern and service for email
+            builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
+            builder.Services.AddTransient<IEmailConfigurationSender, EmailConfigurationSender>();
+            
 
-           // builder.Services.AddScoped<IEmailService,EmailSender>();
-
-            //builder.Services.AddScoped<IEmailSender, EmailSender>();
-
-            //var emailConfig = builder.Configuration.GetSection("EmailConfiguration")
-            //        .Get<MailJetEmailSender>();
-
-            //builder.Services.AddSingleton(emailConfig);
-
-
-            builder.Services.AddTransient<IEmailSender, EmailSender>();
+           // builder.Services.AddTransient<IEmailSender, EmailSender>();
 
 
 

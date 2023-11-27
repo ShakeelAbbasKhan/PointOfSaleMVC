@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using PointOfSaleMVC.EmailSer;
 using PointOfSaleMVC.Models;
 using PointOfSaleMVC.ViewModels;
 using System.Security.Claims;
@@ -16,15 +16,18 @@ namespace PointOfSaleMVC.Controllers
         private readonly RoleManager<IdentityRole> _roleManager;
 
         private readonly SignInManager<ApplicationUser> _signInManager;
-        private readonly IEmailSender _emailSender;
+       // private readonly IEmailSender _emailSender;
         private readonly UrlEncoder _urlEncoder;
-        public AccountController(UserManager<ApplicationUser> userManager,RoleManager<IdentityRole> roleManager,SignInManager<ApplicationUser> signInManager, IEmailSender emailSender, UrlEncoder urlEncoder)
+
+        private readonly IEmailConfigurationSender _emailService;
+        public AccountController(UserManager<ApplicationUser> userManager,RoleManager<IdentityRole> roleManager,SignInManager<ApplicationUser> signInManager
+            , UrlEncoder urlEncoder, IEmailConfigurationSender service)
         {
             _userManager = userManager;
             _roleManager = roleManager;
             _signInManager = signInManager;
-            _emailSender = emailSender;
             _urlEncoder = urlEncoder;
+            _emailService = service;
         }
 
         public IActionResult Index()
@@ -87,11 +90,14 @@ namespace PointOfSaleMVC.Controllers
                         await _userManager.AddToRoleAsync(user, "User");
                     }
 
-                    //var code = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-                    //var callbackurl = Url.Action("ConfirmEmail", "Account", new { userId = user.Id, code = code }, protocol: HttpContext.Request.Scheme);
+                    //var code = await _userManager.GeneratePasswordResetTokenAsync(user);
+                    //var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, code }, protocol: HttpContext.Request.Scheme);
 
-                    //await _emailSender.SendEmailAsync(model.Email, "Confirm your account - Identity Manager",
-                    //    "Please confirm your account by clicking here: <a href=\"" + callbackurl + "\">link</a>");
+                    //var emailSubject = "Reset Password";
+                    //var emailMessage = $"Please reset your password by clicking <a href='{callbackUrl}'>here</a>.";
+
+                    //await _emailService.SendEmailAsync(model.Email, emailSubject, emailMessage);
+
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return LocalRedirect(returnurl);
                 }
@@ -185,35 +191,36 @@ namespace PointOfSaleMVC.Controllers
 
         [HttpGet]
         [AllowAnonymous]
-        public IActionResult ForgotPassword()
+        public async Task<IActionResult> ForgotPassword()
         {
-            return View();
+            ForgotPasswordViewModel forgotModelViewModel = new ForgotPasswordViewModel();
+            return View(forgotModelViewModel);
         }
 
         [HttpPost]
-        [ValidateAntiForgeryToken]
-        [AllowAnonymous]
-        public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
+        public async Task<IActionResult> ForgotPassword(string email)
         {
-
             if (ModelState.IsValid)
             {
-                var user = await _userManager.FindByEmailAsync(model.Email);
+                var user = await _userManager.FindByEmailAsync(email);
+
                 if (user == null)
                 {
+                    // Handle non-existing email
                     return RedirectToAction("ForgotPasswordConfirmation");
                 }
 
                 var code = await _userManager.GeneratePasswordResetTokenAsync(user);
-                var callbackurl = Url.Action("ResetPassword", "Account", new { userId = user.Id, code = code }, protocol: HttpContext.Request.Scheme);
+                var callbackUrl = Url.Action("ResetPassword", "Account", new { userId = user.Id, code }, protocol: HttpContext.Request.Scheme);
 
-                await _emailSender.SendEmailAsync(model.Email, "Reset Password - PointOfSaleMVC Manager",
-                    "Please reset your password by clicking here: <a href=\"" + callbackurl + "\">link</a>");
+                var emailSubject = "Reset Password";
+                var emailMessage = $"Please reset your password by clicking <a href='{callbackUrl}'>here</a>.";
+
+                await _emailService.SendEmailAsync(email, emailSubject, emailMessage);
 
                 return RedirectToAction("ForgotPasswordConfirmation");
             }
-
-            return View(model);
+            return View(email);
         }
 
         [HttpGet]
