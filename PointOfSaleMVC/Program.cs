@@ -23,8 +23,8 @@ namespace PointOfSaleMVC
 
             builder.Services.AddAuthentication().AddFacebook(options =>
             {
-                options.AppId = "254976567565973";
-                options.AppSecret = "57e1db211adc1e9b24042800b71b1071";
+                options.AppId = "2549765675";
+                options.AppSecret = "57e1c19b24042800b71b1071";
             });
 
             // forgot password token lifetime
@@ -34,11 +34,7 @@ namespace PointOfSaleMVC
             // register option pattern and service for email
             builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection("EmailSettings"));
             builder.Services.AddTransient<IEmailConfigurationSender, EmailConfigurationSender>();
-            
-
-           // builder.Services.AddTransient<IEmailSender, EmailSender>();
-
-
+           
 
             builder.Services.Configure<IdentityOptions>(opt =>
             {
