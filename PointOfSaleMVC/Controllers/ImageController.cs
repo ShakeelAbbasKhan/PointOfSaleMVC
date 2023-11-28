@@ -84,6 +84,14 @@ namespace PointOfSaleMVC.Controllers
                                     //add the photo instance to the list.  
                                     photolist.Add(newphoto);
                             }
+
+                            // add images to wwwroot
+                            var fileName = Path.GetFileName(formFile.FileName);
+                            var filePath = Path.Combine(Directory.GetCurrentDirectory(), @"wwwroot\images", fileName);
+                            using (var fileStream = new FileStream(filePath, FileMode.Create))
+                            {
+                                await formFile.CopyToAsync(fileStream);
+                            }
                         }
                     }
                 }
