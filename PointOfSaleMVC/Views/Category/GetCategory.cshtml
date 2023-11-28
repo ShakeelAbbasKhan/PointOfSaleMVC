@@ -1,0 +1,48 @@
+﻿@model List<PointOfSaleMVC.Models.Category>
+
+<h2>Category List</h2>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Id</th>
+            <th>Name</th>
+            <th>Price</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var category in Model)
+        {
+            <tr>
+                <td>@category.Id</td>
+                <td>@category.Name</td>
+                <td>@category.Price</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<div>
+    Page @ViewData["CurrentPage"] of @ViewData["TotalPages"]
+
+    @if ((int)ViewData["CurrentPage"] > 1)
+    {
+        <a href="@Url.Action("GetCategory", new { page = ViewData["CurrentPage"] })">Previous</a>
+    }
+
+    @for (int i = 1; i <= (int)ViewData["TotalPages"]; i++)
+    {
+        <a href="@Url.Action("GetCategory", new { page = i })" class="@(i == (int)ViewData["CurrentPage"] ? "selected" : "")">@i</a>
+    }
+
+    @if ((int)ViewData["CurrentPage"] < (int)ViewData["TotalPages"])
+    {
+        <a href="@Url.Action("GetCategory", new { page = ViewData["CurrentPage"] })">Next</a>
+    }
+</div>
+
+
+
+
+
